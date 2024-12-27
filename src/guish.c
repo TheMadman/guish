@@ -1,3 +1,8 @@
+#include "guish/guish.h"
+
+#include "guish/parse-statement.h"
+#include "guish/process.h"
+
 #include <stdio.h>
 #include <libgen.h>
 #include <fcntl.h>
@@ -14,78 +19,8 @@
 typedef struct scallop_lang_token token_t;
 typedef struct libadt_lptr lptr_t;
 typedef struct libadt_const_lptr const_lptr_t;
-
-#define lex_word scallop_lang_lex_word
-#define lex_word_separator scallop_lang_lex_word_separator
-#define lex_statement_separator scallop_lang_lex_statement_separator
-#define lex_unexpected scallop_lang_lex_unexpected
-#define token_next scallop_lang_token_next
-#define const_lptr libadt_const_lptr
-
-typedef struct command_s {
-	const_lptr_t command;
-	const_lptr_t args;
-} command_t;
-
-typedef struct word_list_s {
-	lptr_t word;
-	struct word_list_s *next;
-} word_list_t;
-
-const_lptr_t get_arg(const_lptr_t args, ssize_t index)
-{
-	return *(const_lptr_t*)
-		libadt_const_lptr_raw(
-		libadt_const_lptr_index(
-		args, index
-	));
-}
-
-command_t handle_statement(token_t token, word_list_t *previous, int count)
-{
-	token = token_next(token);
-	if (token.type == lex_unexpected) {
-		return (command_t) { 0 };
-	} else if (token.type == lex_word) {
-		ssize_t size = scallop_lang_token_normalize_word(token.value, (lptr_t){ 0 });
-		if (size < 0)
-			return (command_t) { 0 };
-		LIBADT_LPTR_WITH(word, (size_t)size, sizeof(char)) {
-			scallop_lang_token_normalize_word(token.value, word);
-			word_list_t current = {
-				word,
-				previous,
-			};
-			return handle_statement(token, &current, ++count);
-		}
-	} else if (token.type == lex_word_separator) {
-		return handle_statement(token, previous, count);
-	} else /* if (token.type == lex_statement_separator) and others */ {
-		/*
-		 * The word_list_t *next is built back-to-front, with the
-		 * _last_ word in the statement
-		 */
-		LIBADT_LPTR_WITH(args, (size_t)count, sizeof(const_lptr_t)) {
-			// All words but the first go on the argument list
-			// The first word is treated as the command, hence
-			// count >= 1
-			for (--count; count >= 0; --count) {
-				const_lptr_t *item =
-					libadt_lptr_raw(
-					libadt_lptr_index(
-					args, count
-				));
-				*item = const_lptr(previous->word);
-				previous = previous->next;
-			}
-			const_lptr_t command = *(const_lptr_t*)libadt_lptr_raw(args);
-			return (command_t) {
-				.command = command,
-				.args = const_lptr(args),
-			};
-		}
-	}
-}
+typedef struct parse_statement_command command_t;
+typedef struct parse_statement statement_t;
 
 int main(int argc, char **argv, char **envp)
 {
@@ -125,14 +60,15 @@ int main(int argc, char **argv, char **envp)
 		.length = (ssize_t)length,
 	};
 
-	token_t token = scallop_lang_token_init(file);
-
-	command_t command = handle_statement(token, NULL, 0);
+	statement_t statement = parse_statement(file);
+	command_t command = statement.command;
 
 	printf("Command: %*s\n", (int)command.command.length, (const char*)command.command.buffer);
 
 	for (ssize_t i = 0; i < command.args.length; i++) {
-		const_lptr_t strptr = get_arg(command.args, i);
+		const_lptr_t strptr = parse_statement_get_arg(command, i);
 		printf("Arg: %*s\n", (int)strptr.length, (const char*)strptr.buffer);
 	}
+
+	return exec_command(command);
 }
