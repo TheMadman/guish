@@ -31,7 +31,7 @@ const_lptr_t parse_statement_get_arg(command_t command, ssize_t index)
 	return *(const_lptr_t*)
 		libadt_const_lptr_raw(
 		libadt_const_lptr_index(
-		command.args, index
+		command.statement, index
 	));
 }
 
@@ -71,28 +71,23 @@ static parse_t handle_statement(token_t token, word_list_t *previous, int count)
 		 * The word_list_t *next is built back-to-front, with the
 		 * _last_ word in the statement
 		 */
-		LIBADT_LPTR_WITH(args, (size_t)count, sizeof(const_lptr_t)) {
-			// All words but the first go on the argument list
-			// The first word is treated as the command, hence
-			// count >= 1
+		LIBADT_LPTR_WITH(statement, (size_t)count, sizeof(const_lptr_t)) {
 			for (--count; count >= 0; --count) {
 				const_lptr_t *item =
 					libadt_lptr_raw(
 					libadt_lptr_index(
-					args, count
+					statement, count
 				));
 				*item = const_lptr(previous->word);
 				previous = previous->next;
 			}
-			const_lptr_t command = *(const_lptr_t*)libadt_lptr_raw(args);
 			const_lptr_t remaining = libadt_const_lptr_after(
 				token.script,
 				token.value
 			);
 			return (parse_t) {
 				.command = {
-					.command = command,
-					.args = const_lptr(args),
+					.statement = const_lptr(statement),
 				},
 				.remaining = remaining,
 			};

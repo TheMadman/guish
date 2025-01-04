@@ -29,7 +29,12 @@ extern "C" {
  * \file
  */
 
-void exec_command(struct parse_statement_command command);
+int fork_wrapper(
+	struct parse_statement_command command,
+	int guiin,
+	int guiout
+);
+int exec_command(struct parse_statement_command command);
 
 #ifdef __cplusplus
 } // extern "C"

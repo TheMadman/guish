@@ -63,12 +63,10 @@ int main(int argc, char **argv, char **envp)
 	statement_t statement = parse_statement(file);
 	command_t command = statement.command;
 
-	printf("Command: %*s\n", (int)command.command.length, (const char*)command.command.buffer);
-
-	for (ssize_t i = 0; i < command.args.length; i++) {
+	for (ssize_t i = 0; i < command.statement.length; i++) {
 		const_lptr_t strptr = parse_statement_get_arg(command, i);
 		printf("Arg: %*s\n", (int)strptr.length, (const char*)strptr.buffer);
 	}
 
-	return exec_command(command);
+	return fork_wrapper(command, -1, -1);
 }

@@ -37,19 +37,20 @@ extern "C" {
  * are passed as arguments.
  */
 struct parse_statement_command {
-
-	/**
-	 * \brief A value storing the command.
-	 */
-	struct libadt_const_lptr command;
-
 	/**
 	 * \brief A pointer to an array of arguments.
 	 *
 	 * By convention, the zeroth argument is the name of
 	 * the command to be run.
 	 */
-	struct libadt_const_lptr args;
+	struct libadt_const_lptr statement;
+
+	/**
+	 * \brief A pointer to an array of environment strings.
+	 *
+	 * Usually of the form VAR=value.
+	 */
+	struct libadt_const_lptr envp;
 };
 
 /**
