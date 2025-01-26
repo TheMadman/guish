@@ -1,6 +1,6 @@
 /*
  * Project Name - Project Description
- * Copyright (C) 2024
+ * Copyright (C) 2025
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,8 +16,8 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef GUISH_PROCESS
-#define GUISH_PROCESS
+#ifndef GUISH_PARSE
+#define GUISH_PARSE
 
 #include <libadt/lptr.h>
 
@@ -29,15 +29,17 @@ extern "C" {
  * \file
  */
 
-int fork_wrapper(
-	struct libadt_const_lptr statement,
-	int guisrv,
-	int guicli
+/**
+ * \brief Parses a list of statements, starting a single
+ * 	guish process to manage them and returning the
+ * 	PID of the spawned shell.
+ */
+int guish_parse_script(
+	struct libadt_const_lptr script
 );
-int exec_command(struct libadt_const_lptr statement);
 
 #ifdef __cplusplus
 } // extern "C"
 #endif
 
-#endif // GUISH_PROCESS
+#endif // GUISH_PARSE

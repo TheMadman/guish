@@ -2,7 +2,6 @@
 
 #include <stdlib.h>
 #include <unistd.h>
-#include <wayland-client-core.h>
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <string.h>
@@ -15,69 +14,60 @@
 #define arrlength libadt_util_arrlength
 #define arrend libadt_util_arrend
 
-typedef struct {
-	int client, server, error;
-} sockpair_t;
-
-typedef char buf_t[4096];
-
-static sockpair_t create_socketpair(int domain, int type, int protocol)
-{
-	int sockpair[2] = { 0 };
-	int error = socketpair(domain, type, protocol, sockpair) < 0;
-	return (sockpair_t) {
-		.client = sockpair[0],
-		.server = sockpair[1],
-		.error = error,
-	};
-}
+#define GUISRV_FILENO 3
+#define GUICLI_FILENO 4
 
 int fork_wrapper(
-	struct parse_statement_command command,
-	int guiin,
-	int guiout
+	struct libadt_const_lptr statement,
+	int guisrv,
+	int guicli
 )
 {
-	sockpair_t sockets = create_socketpair(AF_UNIX, SOCK_STREAM, 0);
-	if (sockets.error)
-		return -1;
-
 	int pid = fork();
 	switch (pid) {
 		case -1:
 			return -1;
 		case 0: {
-			close(sockets.server);
-			char fdbuf[11] = { 0 };
-			snprintf(fdbuf, sizeof(fdbuf), "%d", sockets.client);
-			setenv("WAYLAND_SOCKET", fdbuf, 1);
-			return exec_command(command);
+			// TODO: Maybe we shouldn't do stdin/stdout-like
+			// things here, but I'm not smart enough for
+			// a better solution
+			if (dup2(guisrv, GUISRV_FILENO) == -1)
+				exit(EXIT_FAILURE);
+
+			// There isn't always a client to connect
+			// to, and I think it's better if programs
+			// trying just check if GUICLI_FILENO is
+			// valid and handle it themselves
+			if (
+				guicli >= 0
+				&& dup2(guicli, GUICLI_FILENO) == -1
+			)
+				exit(EXIT_FAILURE);
+			const char wayland_socket_value[] = { '0' + guisrv, '\0' };
+			setenv("WAYLAND_SOCKET", wayland_socket_value, 1);
+			exec_command(statement);
+			// we only get here if execvp() errors
+			exit(EXIT_FAILURE);
 		}
 		default: {
-			close(sockets.client);
-			char buf[4096] = { 0 };
-			ssize_t amount = read(sockets.server, buf, sizeof(buf));
-			printf("client sent %ld bytes\n", amount);
-			kill(pid, SIGTERM);
-			// set up a client socket to the parent
-			wait(NULL);
-			return 0;
+			// do we need anything else here?
+			return pid;
 		}
 	}
 }
 
-int exec_command(struct parse_statement_command command)
+int exec_command(struct libadt_const_lptr statement)
 {
 	// Maybe I should put this logic in libadt somewhere
-	char **args = calloc((size_t)command.statement.length + 1, sizeof(char*));
+	char **args = calloc((size_t)statement.length + 1, sizeof(char*));
 	for (
 		char **out = args;
-		libadt_const_lptr_in_bounds(command.statement);
-		command.statement = libadt_const_lptr_index(command.statement, 1),
+		libadt_const_lptr_in_bounds(statement);
+		statement = libadt_const_lptr_index(statement, 1),
 		out++
 	) {
 		const struct libadt_const_lptr
-			*current = libadt_const_lptr_raw(command.statement);
+			*current = libadt_const_lptr_raw(statement);
 		*out = strndup(libadt_const_lptr_raw(*current), (size_t)current->length);
 	}
 
