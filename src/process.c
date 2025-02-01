@@ -1,21 +1,23 @@
 #include "guish/process.h"
 
-#include <stdlib.h>
+#include "guish/guish.h"
+
 #include <unistd.h>
+#include <stdlib.h>
+#include <string.h>
+#include <libadt/util.h>
 #include <sys/socket.h>
 #include <sys/un.h>
-#include <string.h>
-#include <stdio.h>
-#include <poll.h>
-#include <libadt/util.h>
-
-#include <sys/wait.h>
+#include <stdio.h> // perror
 
 #define arrlength libadt_util_arrlength
 #define arrend libadt_util_arrend
 
-#define GUISRV_FILENO 3
-#define GUICLI_FILENO 4
+#define _STR(PARAM) #PARAM
+#define STR(PARAM) _STR(PARAM)
+
+// temp gettext wrapper
+#define _(str) str
 
 int fork_wrapper(
 	struct libadt_const_lptr statement,
@@ -28,11 +30,33 @@ int fork_wrapper(
 		case -1:
 			return -1;
 		case 0: {
+			// Wayland expects one connection <-> one process,
+			// so we replace guisrv with a new connected
+			// socket to the same peer
+			struct sockaddr_un addr = { 0 };
+			socklen_t addrlen = sizeof(addr);
+			if (getpeername(guisrv, (struct sockaddr*)&addr, &addrlen) < 0) {
+				perror("getpeername");
+				exit(EXIT_FAILURE);
+			}
+
+			guisrv = socket(AF_UNIX, SOCK_STREAM, 0);
+			if (guisrv < 0) {
+				perror("Creating new socket");
+				exit(EXIT_FAILURE);
+			}
+			if (connect(guisrv, (struct sockaddr*)&addr, addrlen) < 0) {
+				perror("Connecting to wayland");
+				exit(EXIT_FAILURE);
+			}
+
 			// TODO: Maybe we shouldn't do stdin/stdout-like
 			// things here, but I'm not smart enough for
 			// a better solution
-			if (dup2(guisrv, GUISRV_FILENO) == -1)
+			if (dup2(guisrv, GUISRV_FILENO) == -1) {
+				perror("guisrv dup2");
 				exit(EXIT_FAILURE);
+			}
 
 			// There isn't always a client to connect
 			// to, and I think it's better if programs
@@ -41,12 +65,14 @@ int fork_wrapper(
 			if (
 				guicli >= 0
 				&& dup2(guicli, GUICLI_FILENO) == -1
-			)
+			) {
+				perror("guicli dup2");
 				exit(EXIT_FAILURE);
-			const char wayland_socket_value[] = { '0' + guisrv, '\0' };
-			setenv("WAYLAND_SOCKET", wayland_socket_value, 1);
+			}
+			setenv("WAYLAND_SOCKET", STR(GUISRV_FILENO), 1);
 			exec_command(statement);
 			// we only get here if execvp() errors
+			perror(_("Failed to execute command"));
 			exit(EXIT_FAILURE);
 		}
 		default: {

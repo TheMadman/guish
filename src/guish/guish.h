@@ -27,6 +27,22 @@ extern "C" {
  * \file
  */
 
+/**
+ * \brief Constant file descriptor for the GUI Server.
+ *
+ * This represents an already-connected socket to the
+ * Wayland compositor.
+ */
+#define GUISRV_FILENO 3
+
+/**
+ * \brief Constant file descriptor for a GUI Client.
+ *
+ * This file descriptor can, optionally, be connected to a
+ * Wayland client.
+ */
+#define GUICLI_FILENO 4
+
 #ifdef __cplusplus
 } // extern "C"
 #endif
