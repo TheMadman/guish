@@ -28,42 +28,6 @@ typedef struct libadt_const_lptr const_lptr_t;
 typedef struct parse_statement_command command_t;
 typedef struct parse_statement statement_t;
 
-#if 0
-int parse_statements(const_lptr_t file)
-{
-	statement_t statement = parse_statement(file);
-	command_t command = statement.command;
-
-	if (command.statement.length == 0)
-		return 0;
-
-	for (ssize_t i = 0; i < command.statement.length; i++) {
-		const_lptr_t strptr = parse_statement_get_arg(command, i);
-		printf("Arg: %*s\n", (int)strptr.length, (const char*)strptr.buffer);
-	}
-
-	int pid = fork();
-	switch (pid) {
-		case -1:
-			return EXIT_FAILURE;
-		case 0: {
-			struct wl_display *display = wl_display_connect(NULL);
-			if (!display)
-				perror_exit(_("Failed to initialize Wayland display"));
-			int display_fd = wl_display_get_fd(display);
-
-			return fork_wrapper(command, display_fd, display_fd);
-		}
-		default: {
-			int futures = parse_statements(statement.remaining);
-			int wstatus = 0;
-			waitpid(pid, &wstatus, 0);
-			return MAX(0, MAX(futures, WEXITSTATUS(wstatus)));
-		}
-	}
-}
-#endif
-
 int main(int argc, char **argv)
 {
 	setlocale(LC_ALL, "");

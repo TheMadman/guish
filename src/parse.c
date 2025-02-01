@@ -125,11 +125,10 @@ static token_t parse_statement_impl(
 				previous = previous->next;
 			}
 
-			fork_wrapper(const_lptr(statement), guisrv, guicli);
-
-			return parse_script_impl(token, guisrv);
+			if (fork_wrapper(const_lptr(statement), guisrv, guicli) < 0)
+				HANDLE_ERROR();
 		}
-		HANDLE_ERROR();
+		return parse_script_impl(token, guisrv);
 	}
 
 	return token;
