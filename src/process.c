@@ -11,6 +11,7 @@
 #include <stdio.h> // perror
 #include <errno.h>
 
+#define const_raw libadt_const_lptr_raw
 #define arrlength libadt_util_arrlength
 #define arrend libadt_util_arrend
 
@@ -20,8 +21,10 @@
 // temp gettext wrapper
 #define _(str) str
 
+typedef struct libadt_const_lptr clptr;
+
 int fork_wrapper(
-	struct libadt_const_lptr statement,
+	clptr statement,
 	int guisrv,
 	int guicli
 )
@@ -73,7 +76,8 @@ int fork_wrapper(
 			setenv("WAYLAND_SOCKET", STR(GUISRV_FILENO), 1);
 			exec_command(statement);
 			// we only get here if execvp() errors
-			perror(_("Failed to execute command"));
+			const char *command = const_raw(*(clptr*)const_raw(statement));
+			fprintf(stderr, _("Failed to execute %s: %s\n"), command, strerror(errno));
 			exit(EXIT_FAILURE);
 		}
 		default: {
@@ -83,7 +87,7 @@ int fork_wrapper(
 	}
 }
 
-int exec_command(struct libadt_const_lptr statement)
+int exec_command(clptr statement)
 {
 	// Maybe I should put this logic in libadt somewhere
 	char **args = calloc((size_t)statement.length + 1, sizeof(char*));
@@ -93,9 +97,9 @@ int exec_command(struct libadt_const_lptr statement)
 		statement = libadt_const_lptr_index(statement, 1),
 		out++
 	) {
-		const struct libadt_const_lptr
-			*current = libadt_const_lptr_raw(statement);
-		*out = strndup(libadt_const_lptr_raw(*current), (size_t)current->length);
+		const clptr
+			*current = const_raw(statement);
+		*out = strndup(const_raw(*current), (size_t)current->length);
 	}
 
 	// I don't care if we leak memory if execvp() fails
