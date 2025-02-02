@@ -157,12 +157,14 @@ static token_t parse_script_impl(token_t token, int guisrv)
 			end_block.type = lex_unexpected;
 			return end_block;
 		}
+		return parse_script_impl(end_block, guisrv);
 	}
 
 	if (next.type == lex_square_block) {
 		// some any-of implementation
 	}
 
+	// skips comments, word/statement separators etc.
 	return parse_script_impl(next, guisrv);
 }
 
