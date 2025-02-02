@@ -35,7 +35,8 @@ extern "C" {
  * 	PID of the spawned shell.
  */
 int guish_parse_script(
-	struct libadt_const_lptr script
+	struct libadt_const_lptr script,
+	int guisrv
 );
 
 #ifdef __cplusplus

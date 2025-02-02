@@ -4,7 +4,6 @@
 #include <unistd.h>
 #include <sys/socket.h>
 #include <sys/un.h>
-#include <wayland-client-core.h>
 
 #include <scallop-lang/token.h>
 
@@ -165,16 +164,11 @@ static token_t parse_script_impl(token_t token, int guisrv)
 	return parse_script_impl(next, guisrv);
 }
 
-int guish_parse_script(const_lptr_t script)
+int guish_parse_script(const_lptr_t script, int guisrv)
 {
-	struct wl_display *display = wl_display_connect(NULL);
-	if (!display)
-		return -1;
-	int display_fd = wl_display_get_fd(display);
-
 	token_t last = parse_script_impl(
 		scallop_lang_token_init(script),
-		display_fd
+		guisrv
 	);
 
 	return last.type == lex_end ? 0 : -1;

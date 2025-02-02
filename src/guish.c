@@ -11,6 +11,7 @@
 #include <locale.h>
 #include <wait.h>
 #include <errno.h>
+#include <wayland-client-core.h>
 
 #include <libadt/lptr.h>
 #include <libadt/util.h>
@@ -63,7 +64,12 @@ int main(int argc, char **argv)
 		.length = (ssize_t)length,
 	};
 
-	if (guish_parse_script(file) < 0)
+	struct wl_display *display = wl_display_connect(NULL);
+	if (!display)
+		perror_exit(_("Failed to get Wayland display"));
+	int display_fd = wl_display_get_fd(display);
+
+	if (guish_parse_script(file, display_fd) < 0)
 		perror_exit(_("Failed to execute script"));
 
 	int worst_return = EXIT_SUCCESS;
