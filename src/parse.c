@@ -109,7 +109,6 @@ static token_t parse_statement_impl(
 		if (socketpair(AF_UNIX, SOCK_STREAM, 0, sockets) < 0)
 			HANDLE_ERROR();
 
-		// TODO: do we ever need to take guicli as an argument?
 		guicli = sockets[0];
 		token = parse_script_impl(token, sockets[1]);
 
