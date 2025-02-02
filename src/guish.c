@@ -10,6 +10,7 @@
 #include <unistd.h>
 #include <locale.h>
 #include <wait.h>
+#include <errno.h>
 
 #include <libadt/lptr.h>
 #include <libadt/util.h>
@@ -64,4 +65,11 @@ int main(int argc, char **argv)
 
 	if (guish_parse_script(file) < 0)
 		perror_exit(_("Failed to execute script"));
+
+	int worst_return = EXIT_SUCCESS;
+	errno = 0;
+	for (int wstatus = 0; wait(&wstatus) > 0;)
+		worst_return = MAX(worst_return, WEXITSTATUS(wstatus));
+
+	return worst_return;
 }
