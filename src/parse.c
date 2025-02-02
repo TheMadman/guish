@@ -153,8 +153,10 @@ static token_t parse_script_impl(token_t token, int guisrv)
 	// to no curly bracket block
 	if (next.type == lex_curly_block) {
 		token_t end_block = parse_script_impl(next, guisrv);
-		if (end_block.type != lex_curly_block_end)
-			return (token_t){ 0 };
+		if (end_block.type != lex_curly_block_end) {
+			end_block.type = lex_unexpected;
+			return end_block;
+		}
 	}
 
 	if (next.type == lex_square_block) {
