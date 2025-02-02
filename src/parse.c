@@ -142,13 +142,11 @@ static token_t parse_script_impl(token_t token, int guisrv)
 	const bool end
 		= next.type == lex_end
 		|| next.type == lex_curly_block_end
-		|| next.type == lex_square_block_end;
+		|| next.type == lex_square_block_end
+		|| next.type == lex_unexpected;
 
 	if (end)
 		return next;
-
-	if (next.type == lex_unexpected)
-		return (token_t){ 0 };
 
 	if (next.type == lex_word)
 		return parse_statement_impl(token, guisrv, NULL, 0);
