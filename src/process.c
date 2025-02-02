@@ -9,6 +9,7 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <stdio.h> // perror
+#include <errno.h>
 
 #define arrlength libadt_util_arrlength
 #define arrend libadt_util_arrend
@@ -31,22 +32,22 @@ int fork_wrapper(
 			return -1;
 		case 0: {
 			// Wayland expects one connection <-> one process,
-			// so we replace guisrv with a new connected
-			// socket to the same peer
+			// so we replace guisrv with a new socket
+			// connected to the same peer
 			struct sockaddr_un addr = { 0 };
 			socklen_t addrlen = sizeof(addr);
 			if (getpeername(guisrv, (struct sockaddr*)&addr, &addrlen) < 0) {
-				perror("getpeername");
+				perror(_("getpeername failure"));
 				exit(EXIT_FAILURE);
 			}
 
 			guisrv = socket(AF_UNIX, SOCK_STREAM, 0);
 			if (guisrv < 0) {
-				perror("Creating new socket");
+				perror(_("Creating new socket"));
 				exit(EXIT_FAILURE);
 			}
 			if (connect(guisrv, (struct sockaddr*)&addr, addrlen) < 0) {
-				perror("Connecting to wayland");
+				perror(_("Connecting to wayland"));
 				exit(EXIT_FAILURE);
 			}
 
@@ -54,7 +55,7 @@ int fork_wrapper(
 			// things here, but I'm not smart enough for
 			// a better solution
 			if (dup2(guisrv, GUISRV_FILENO) == -1) {
-				perror("guisrv dup2");
+				perror(_("guisrv dup2"));
 				exit(EXIT_FAILURE);
 			}
 
@@ -66,7 +67,7 @@ int fork_wrapper(
 				guicli >= 0
 				&& dup2(guicli, GUICLI_FILENO) == -1
 			) {
-				perror("guicli dup2");
+				perror(_("guicli dup2"));
 				exit(EXIT_FAILURE);
 			}
 			setenv("WAYLAND_SOCKET", STR(GUISRV_FILENO), 1);
