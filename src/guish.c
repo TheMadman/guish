@@ -65,8 +65,10 @@ int main(int argc, char **argv)
 	};
 
 	struct wl_display *display = wl_display_connect(NULL);
-	if (!display)
-		perror_exit(_("Failed to get Wayland display"));
+	if (!display) {
+		fprintf(stderr, _("Failed to get Wayland display\n"));
+		exit(EXIT_FAILURE);
+	}
 	int display_fd = wl_display_get_fd(display);
 
 	if (guish_parse_script(file, display_fd) < 0)
