@@ -109,10 +109,11 @@ static token_t parse_statement_impl(
 			HANDLE_ERROR();
 
 		guicli = sockets[0];
-		token = parse_script_impl(token, sockets[1]);
-
 		// TODO: don't rely on the script always having
 		// a statement separator after a closing curly bracket
+		token = parse_script_impl(token, sockets[1]);
+		if (token.type != lex_curly_block_end)
+			HANDLE_ERROR();
 	} else /* if (token.type == lex_statement_separator) and friends */ {
 		LPTR_WITH(statement, (size_t)count, sizeof(lptr_t)) {
 			for (--count; count >= 0; --count) {
