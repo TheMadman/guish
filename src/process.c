@@ -11,7 +11,7 @@
 #include <stdio.h> // perror
 #include <errno.h>
 
-#define const_raw libadt_const_lptr_raw
+#define clptr_raw libadt_const_lptr_raw
 #define arrlength libadt_util_arrlength
 #define arrend libadt_util_arrend
 
@@ -76,7 +76,7 @@ int fork_wrapper(
 			setenv("WAYLAND_SOCKET", STR(GUISRV_FILENO), 1);
 			exec_command(statement);
 			// we only get here if execvp() errors
-			const char *command = const_raw(*(clptr*)const_raw(statement));
+			const char *command = clptr_raw(*(clptr*)clptr_raw(statement));
 			fprintf(stderr, _("Failed to execute %s: %s\n"), command, strerror(errno));
 			exit(EXIT_FAILURE);
 		}
@@ -98,8 +98,8 @@ int exec_command(clptr statement)
 		out++
 	) {
 		const clptr
-			*current = const_raw(statement);
-		*out = strndup(const_raw(*current), (size_t)current->length);
+			*current = clptr_raw(statement);
+		*out = strndup(clptr_raw(*current), (size_t)current->length);
 	}
 
 	// I don't care if we leak memory if execvp() fails
