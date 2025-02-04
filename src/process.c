@@ -50,7 +50,7 @@ int fork_wrapper(
 				exit(EXIT_FAILURE);
 			}
 			if (connect(guisrv, (struct sockaddr*)&addr, addrlen) < 0) {
-				perror(_("Connecting to wayland"));
+				perror(_("Connecting to Wayland"));
 				exit(EXIT_FAILURE);
 			}
 
