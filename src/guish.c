@@ -71,8 +71,9 @@ int main(int argc, char **argv)
 	}
 	int display_fd = wl_display_get_fd(display);
 
-	if (guish_parse_script(file, display_fd) < 0)
-		perror_exit(_("Failed to execute script"));
+	if (guish_parse_script(file, display_fd) < 0) {
+		fprintf(stderr, _("Parse error\n"));
+	}
 
 	int worst_return = EXIT_SUCCESS;
 	errno = 0;
