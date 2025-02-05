@@ -46,11 +46,18 @@ int fork_wrapper(
 
 			guisrv = socket(AF_UNIX, SOCK_STREAM, 0);
 			if (guisrv < 0) {
-				perror(_("Creating new socket"));
+				perror(_("Failed to create compositor socket"));
 				exit(EXIT_FAILURE);
 			}
 			if (connect(guisrv, (struct sockaddr*)&addr, addrlen) < 0) {
-				perror(_("Connecting to Wayland"));
+				perror(_("Failed to connect to compositor"));
+				exit(EXIT_FAILURE);
+			}
+
+			if (guicli < 0)
+				guicli = socket(AF_UNIX, SOCK_STREAM, 0);
+			if (guicli < 0) {
+				perror(_("Failed to create client socket"));
 				exit(EXIT_FAILURE);
 			}
 
@@ -58,15 +65,12 @@ int fork_wrapper(
 			// things here, but I'm not smart enough for
 			// a better solution
 			if (dup2(guisrv, GUISRV_FILENO) == -1) {
-				perror(_("guisrv dup2"));
+				perror(_("Failed to assign GUISRV_FILENO"));
 				exit(EXIT_FAILURE);
 			}
 
-			if (
-				guicli >= 0
-				&& dup2(guicli, GUICLI_FILENO) == -1
-			) {
-				perror(_("guicli dup2"));
+			if (dup2(guicli, GUICLI_FILENO) == -1) {
+				perror(_("Failed to assign GUICLI_FILENO"));
 				exit(EXIT_FAILURE);
 			}
 			setenv("WAYLAND_SOCKET", STR(GUISRV_FILENO), 1);
