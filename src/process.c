@@ -62,10 +62,6 @@ int fork_wrapper(
 				exit(EXIT_FAILURE);
 			}
 
-			// There isn't always a client to connect
-			// to, and I think it's better if programs
-			// trying just check if GUICLI_FILENO is
-			// valid and handle it themselves
 			if (
 				guicli >= 0
 				&& dup2(guicli, GUICLI_FILENO) == -1

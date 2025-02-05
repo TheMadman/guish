@@ -1,8 +1,13 @@
-add_executable(guish guish.c parse.c process.c)
+add_library(guish SHARED guish.c)
 
-target_link_libraries(guish adt scallop-lang wayland-client)
+add_executable(guish-bin main.c guish parse.c process.c)
+set_target_properties(guish-bin
+	PROPERTIES OUTPUT_NAME guish)
+target_link_libraries(guish-bin adt scallop-lang wayland-client)
 
 install(TARGETS guish
+	DESTINATION lib)
+install(TARGETS guish-bin
 	DESTINATION bin)
 install(DIRECTORY guish
 	DESTINATION include)
