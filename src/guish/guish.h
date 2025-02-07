@@ -38,8 +38,11 @@ extern "C" {
 /**
  * \brief Constant file descriptor for a GUI Client.
  *
- * This file descriptor can, optionally, be connected to a
- * Wayland client.
+ * This file descriptor can listen for Wayland clients.
+ *
+ * If no clients are defined in the pipeline, this is
+ * still a socket that can be listened on, but there
+ * is no way for clients to connect to it.
  */
 #define GUICLI_FILENO 4
 
