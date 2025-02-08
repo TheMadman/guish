@@ -17,6 +17,7 @@ listen for client connections.
 
 - [libadt](https://github.com/TheMadman/libadt)
 - [scallop-lang](https://github.com/TheMadman/scallop-lang)
+- [libwayland](https://gitlab.freedesktop.org/wayland)
 - cmake
 
 ## Quickstart
