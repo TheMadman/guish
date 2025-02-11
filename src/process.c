@@ -43,6 +43,7 @@ int fork_wrapper(
 				perror(_("getpeername failure"));
 				exit(EXIT_FAILURE);
 			}
+			close(guisrv);
 
 			guisrv = socket(AF_UNIX, SOCK_STREAM, 0);
 			if (guisrv < 0) {
