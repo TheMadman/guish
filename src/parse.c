@@ -127,7 +127,7 @@ static token_t parse_statement_impl(
 			if (fork_wrapper(const_lptr(statement), guisrv, guicli) < 0)
 				HANDLE_ERROR();
 		}
-		return parse_script_impl(token, guisrv);
+		return token;
 	}
 
 	return token;
@@ -147,8 +147,10 @@ static token_t parse_script_impl(token_t token, int guisrv)
 	if (end)
 		return next;
 
-	if (next.type == lex_word)
-		return parse_statement_impl(token, guisrv, NULL, 0);
+	if (next.type == lex_word) {
+		next = parse_statement_impl(token, guisrv, NULL, 0);
+		return parse_script_impl(next, guisrv);
+	}
 
 	// A curly bracket block at the top level is identical
 	// to no curly bracket block
@@ -159,10 +161,6 @@ static token_t parse_script_impl(token_t token, int guisrv)
 			return end_block;
 		}
 		return parse_script_impl(end_block, guisrv);
-	}
-
-	if (next.type == lex_square_block) {
-		// some any-of implementation
 	}
 
 	// skips comments, word/statement separators etc.
