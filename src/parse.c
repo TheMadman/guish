@@ -34,6 +34,56 @@ typedef struct word_list_s {
 	struct word_list_s *next;
 } word_list_t;
 
+typedef struct {
+	int srv;
+	int cli;
+} connection_t;
+
+static connection_t new_connection(void)
+{
+	/*
+	 * A lot of this is to work-around the fact
+	 * that the connection the shell gets to the
+	 * Wayland compositor is an already-connected
+	 * file descriptor.
+	 *
+	 * We have to "emulate" that for contexts below
+	 * directly connecting to the compositor, such as
+	 *
+	 * foo { bar; baz; }
+	 *       ^^^--^^^- these guys
+	 */
+	const connection_t error = { -1, -1 };
+	int srv = socket(AF_UNIX, SOCK_STREAM, 0);
+	if (srv < 0)
+		return error;
+
+	struct sockaddr_un addr = { .sun_family = AF_UNIX };
+	socklen_t addrlen = sizeof(addr);
+
+	// Depends on autobinding, is this Linux-specific?
+	if (bind(srv, (struct sockaddr*)&addr, sizeof(addr.sun_family)) < 0)
+		return error;
+
+	if (getsockname(srv, (struct sockaddr*)&addr, &addrlen) < 0) {
+		close(srv);
+		return error;
+	}
+
+	int cli = socket(AF_UNIX, SOCK_STREAM, 0);
+	if (cli < 0) {
+		close(srv);
+		return error;
+	}
+
+	if (connect(cli, (struct sockaddr*)&addr, addrlen) < 0) {
+		close(srv);
+		return error;
+	}
+
+	return (connection_t){ .srv = srv, .cli = cli };
+}
+
 static token_t parse_statement_impl(
 	token_t token,
 	int guisrv,
@@ -94,21 +144,22 @@ static token_t parse_statement_impl(
 		}
 		return result;
 	} else if (token.type == lex_curly_block) {
-		guicli = socket(AF_UNIX, SOCK_STREAM, 0);
-		if (guicli < 0)
+		connection_t connection = new_connection();
+
+		if (connection.srv == -1)
 			return (token_t){ 0 };
 
-		struct sockaddr_un addr = { .sun_family = AF_UNIX };
-
-		// Depends on autobinding, is this Linux-specific?
-		if (bind(guicli, (struct sockaddr*)&addr, sizeof(addr.sun_family)) < 0)
-			return (token_t){ 0 };
+		// confusing naming: "guicli" is the
+		// SERVER's file descriptor for CLIENTs
+		guicli = connection.srv;
 
 		// TODO: don't rely on the script always having
 		// a statement separator after a closing curly bracket
-		token = parse_script_impl(token, guicli);
-		if (token.type != lex_curly_block_end)
+		token = parse_script_impl(token, connection.cli);
+		if (token.type != lex_curly_block_end) {
+			close(guicli);
 			return (token_t){ 0 };
+		}
 	} else /* if (token.type == lex_statement_separator) and friends */ {
 		int error = -1;
 		LPTR_WITH(statement, (size_t)count, sizeof(lptr_t)) {
