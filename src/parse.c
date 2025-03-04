@@ -34,12 +34,6 @@ typedef struct word_list_s {
 	struct word_list_s *next;
 } word_list_t;
 
-static void free_word_list(word_list_t *list)
-{
-	for (; list; list = list->next)
-		libadt_lptr_free(list->word);
-}
-
 static token_t parse_statement_impl(
 	token_t token,
 	int guisrv,
@@ -58,18 +52,12 @@ static token_t parse_statement_impl(
 	int count
 )
 {
-// Not sure if I prefer this over "goto error;"
-#define HANDLE_ERROR() do { \
-	free_word_list(previous); \
-	return (token_t){ 0 }; \
-} while (0)
-
 	int guicli = -1;
 
 	token = token_next(token);
 
 	if (token.type == lex_unexpected) {
-		HANDLE_ERROR();
+		return (token_t){ 0 };
 	} else if (token.type == lex_word_separator) {
 		return parse_statement_impl(
 			token,
@@ -83,8 +71,9 @@ static token_t parse_statement_impl(
 			(lptr_t){ 0 }
 		);
 		if (size < 0)
-			HANDLE_ERROR();
+			return (token_t){ 0 };
 
+		token_t result = { 0 };
 		LPTR_WITH(word, (size_t)size + 1, sizeof(char)) {
 			scallop_lang_token_normalize_word(
 				token.value,
@@ -95,26 +84,28 @@ static token_t parse_statement_impl(
 				word,
 				previous,
 			};
-			return parse_statement_impl(
+
+			result = parse_statement_impl(
 				token,
 				guisrv,
 				&current,
 				++count
 			);
 		}
-		HANDLE_ERROR();
+		return result;
 	} else if (token.type == lex_curly_block) {
 		int sockets[2] = { 0 };
 		if (socketpair(AF_UNIX, SOCK_STREAM, 0, sockets) < 0)
-			HANDLE_ERROR();
+			return (token_t){ 0 };
 
 		guicli = sockets[0];
 		// TODO: don't rely on the script always having
 		// a statement separator after a closing curly bracket
 		token = parse_script_impl(token, sockets[1]);
 		if (token.type != lex_curly_block_end)
-			HANDLE_ERROR();
+			return (token_t){ 0 };
 	} else /* if (token.type == lex_statement_separator) and friends */ {
+		int error = -1;
 		LPTR_WITH(statement, (size_t)count, sizeof(lptr_t)) {
 			for (--count; count >= 0; --count) {
 				const_lptr_t *item = lptr_raw(
@@ -123,15 +114,13 @@ static token_t parse_statement_impl(
 				*item = const_lptr(previous->word);
 				previous = previous->next;
 			}
-
-			if (fork_wrapper(const_lptr(statement), guisrv, guicli) < 0)
-				HANDLE_ERROR();
+			error = fork_wrapper(const_lptr(statement), guisrv, guicli);
 		}
-		return token;
+		if (error < 0)
+			return (token_t){ 0 };
 	}
 
 	return token;
-#undef HANDLE_ERROR
 }
 
 static token_t parse_script_impl(token_t token, int guisrv)
