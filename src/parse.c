@@ -94,14 +94,19 @@ static token_t parse_statement_impl(
 		}
 		return result;
 	} else if (token.type == lex_curly_block) {
-		int sockets[2] = { 0 };
-		if (socketpair(AF_UNIX, SOCK_STREAM, 0, sockets) < 0)
+		guicli = socket(AF_UNIX, SOCK_STREAM, 0);
+		if (guicli < 0)
 			return (token_t){ 0 };
 
-		guicli = sockets[0];
+		struct sockaddr_un addr = { .sun_family = AF_UNIX };
+
+		// Depends on autobinding, is this Linux-specific?
+		if (bind(guicli, (struct sockaddr*)&addr, sizeof(addr.sun_family)) < 0)
+			return (token_t){ 0 };
+
 		// TODO: don't rely on the script always having
 		// a statement separator after a closing curly bracket
-		token = parse_script_impl(token, sockets[1]);
+		token = parse_script_impl(token, guicli);
 		if (token.type != lex_curly_block_end)
 			return (token_t){ 0 };
 	} else /* if (token.type == lex_statement_separator) and friends */ {
