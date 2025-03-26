@@ -14,7 +14,7 @@
 
 #include <libadt/lptr.h>
 #include <libadt/util.h>
-#include <scallop-lang/token.h>
+#include <scallop-lang/lex.h>
 
 // gettext placeholder
 #define _(str) str
@@ -23,7 +23,7 @@
 
 #define MAX libadt_util_max
 
-typedef struct scallop_lang_token token_t;
+typedef struct scallop_lang_lex lex_t;
 typedef struct libadt_lptr lptr_t;
 typedef struct libadt_const_lptr const_lptr_t;
 typedef struct parse_statement_command command_t;

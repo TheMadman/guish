@@ -5,23 +5,23 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 
-#include <scallop-lang/token.h>
+#include <scallop-lang/lex.h>
 
 #include "guish/process.h"
 
 typedef struct libadt_lptr lptr_t;
 typedef struct libadt_const_lptr const_lptr_t;
-typedef struct scallop_lang_token token_t;
+typedef struct scallop_lang_lex lex_t;
 
-#define lex_word scallop_lang_lex_word
-#define lex_word_separator scallop_lang_lex_word_separator
-#define lex_unexpected scallop_lang_lex_unexpected
-#define lex_end scallop_lang_lex_end
-#define lex_curly_block scallop_lang_lex_curly_block
-#define lex_curly_block_end scallop_lang_lex_curly_block_end
-#define lex_square_block scallop_lang_lex_square_block
-#define lex_square_block_end scallop_lang_lex_square_block_end
-#define token_next scallop_lang_token_next
+#define c_word scallop_lang_classifier_word
+#define c_word_separator scallop_lang_classifier_word_separator
+#define c_unexpected scallop_lang_classifier_unexpected
+#define c_end scallop_lang_classifier_end
+#define c_curly_block scallop_lang_classifier_curly_block
+#define c_curly_block_end scallop_lang_classifier_curly_block_end
+#define c_square_block scallop_lang_classifier_square_block
+#define c_square_block_end scallop_lang_classifier_square_block_end
+#define lex_next scallop_lang_lex_next
 
 #define lptr_raw libadt_lptr_raw
 #define lptr_index libadt_lptr_index
@@ -84,19 +84,19 @@ static connection_t new_connection(void)
 	return (connection_t){ .srv = srv, .cli = cli };
 }
 
-static token_t parse_statement_impl(
-	token_t token,
+static lex_t parse_statement_impl(
+	lex_t lex,
 	int guisrv,
 	word_list_t *previous,
 	int count
 );
-static token_t parse_script_impl(
-	token_t token,
+static lex_t parse_script_impl(
+	lex_t lex,
 	int guisrv
 );
 
-static token_t parse_statement_impl(
-	token_t token,
+static lex_t parse_statement_impl(
+	lex_t lex,
 	int guisrv,
 	word_list_t *previous,
 	int count
@@ -104,29 +104,29 @@ static token_t parse_statement_impl(
 {
 	int guicli = -1;
 
-	token = token_next(token);
+	lex = lex_next(lex);
 
-	if (token.type == lex_unexpected) {
-		return (token_t){ 0 };
-	} else if (token.type == lex_word_separator) {
+	if (lex.type == c_unexpected) {
+		return (lex_t){ 0 };
+	} else if (lex.type == c_word_separator) {
 		return parse_statement_impl(
-			token,
+			lex,
 			guisrv,
 			previous,
 			count
 		);
-	} else if (token.type == lex_word) {
-		ssize_t size = scallop_lang_token_normalize_word(
-			token.value,
+	} else if (lex.type == c_word) {
+		ssize_t size = scallop_lang_lex_normalize_word(
+			lex.value,
 			(lptr_t){ 0 }
 		);
 		if (size < 0)
-			return (token_t){ 0 };
+			return (lex_t){ 0 };
 
-		token_t result = { 0 };
+		lex_t result = { 0 };
 		LPTR_WITH(word, (size_t)size + 1, sizeof(char)) {
-			scallop_lang_token_normalize_word(
-				token.value,
+			scallop_lang_lex_normalize_word(
+				lex.value,
 				word
 			);
 
@@ -136,18 +136,18 @@ static token_t parse_statement_impl(
 			};
 
 			result = parse_statement_impl(
-				token,
+				lex,
 				guisrv,
 				&current,
 				++count
 			);
 		}
 		return result;
-	} else if (token.type == lex_curly_block) {
+	} else if (lex.type == c_curly_block) {
 		connection_t connection = new_connection();
 
 		if (connection.srv == -1)
-			return (token_t){ 0 };
+			return (lex_t){ 0 };
 
 		// confusing naming: "guicli" is the
 		// SERVER's file descriptor for CLIENTs
@@ -155,12 +155,12 @@ static token_t parse_statement_impl(
 
 		// TODO: don't rely on the script always having
 		// a statement separator after a closing curly bracket
-		token = parse_script_impl(token, connection.cli);
-		if (token.type != lex_curly_block_end) {
+		lex = parse_script_impl(lex, connection.cli);
+		if (lex.type != c_curly_block_end) {
 			close(guicli);
-			return (token_t){ 0 };
+			return (lex_t){ 0 };
 		}
-	} else /* if (token.type == lex_statement_separator) and friends */ {
+	} else /* if (lex.type == c_statement_separator) and friends */ {
 		int error = -1;
 		LPTR_WITH(statement, (size_t)count, sizeof(lptr_t)) {
 			for (--count; count >= 0; --count) {
@@ -173,36 +173,36 @@ static token_t parse_statement_impl(
 			error = fork_wrapper(const_lptr(statement), guisrv, guicli);
 		}
 		if (error < 0)
-			return (token_t){ 0 };
+			return (lex_t){ 0 };
 	}
 
-	return token;
+	return lex;
 }
 
-static token_t parse_script_impl(token_t token, int guisrv)
+static lex_t parse_script_impl(lex_t lex, int guisrv)
 {
-	token_t next = token_next(token);
+	lex_t next = lex_next(lex);
 
 	const bool end
-		= next.type == lex_end
-		|| next.type == lex_curly_block_end
-		|| next.type == lex_square_block_end
-		|| next.type == lex_unexpected;
+		= next.type == c_end
+		|| next.type == c_curly_block_end
+		|| next.type == c_square_block_end
+		|| next.type == c_unexpected;
 
 	if (end)
 		return next;
 
-	if (next.type == lex_word) {
-		next = parse_statement_impl(token, guisrv, NULL, 0);
+	if (next.type == c_word) {
+		next = parse_statement_impl(lex, guisrv, NULL, 0);
 		return parse_script_impl(next, guisrv);
 	}
 
 	// A curly bracket block at the top level is identical
 	// to no curly bracket block
-	if (next.type == lex_curly_block) {
-		token_t end_block = parse_script_impl(next, guisrv);
-		if (end_block.type != lex_curly_block_end) {
-			end_block.type = lex_unexpected;
+	if (next.type == c_curly_block) {
+		lex_t end_block = parse_script_impl(next, guisrv);
+		if (end_block.type != c_curly_block_end) {
+			end_block.type = c_unexpected;
 			return end_block;
 		}
 		return parse_script_impl(end_block, guisrv);
@@ -214,10 +214,10 @@ static token_t parse_script_impl(token_t token, int guisrv)
 
 int guish_parse_script(const_lptr_t script, int guisrv)
 {
-	token_t last = parse_script_impl(
-		scallop_lang_token_init(script),
+	lex_t last = parse_script_impl(
+		scallop_lang_lex_init(script),
 		guisrv
 	);
 
-	return last.type == lex_end ? 0 : -1;
+	return last.type == c_end ? 0 : -1;
 }
