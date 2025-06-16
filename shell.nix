@@ -1,9 +1,9 @@
 let
 	pkgs = import <nixpkgs> {};
-	descent-xml = import ./.;
+	guish = import ./.;
 in
 pkgs.mkShell {
-	inputsFrom = [descent-xml];
+	inputsFrom = [guish];
 	nativeBuildInputs = [pkgs.gdb pkgs.graphviz pkgs.doxygen];
 	shellHook = ''
 		export CFLAGS='-Wall -Wextra -Wshadow -fsanitize=address -fsanitize=leak -fsanitize=undefined'
