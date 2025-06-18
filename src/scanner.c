@@ -53,7 +53,7 @@ typedef struct descent_xml_lex token_t;
 
 // TODO: this entire program breaks if the XML is UTF-16
 
-ssize_t interface_count = 0;
+int interface_count = 0;
 
 token_t interface_member_handler(
 	token_t token,
@@ -63,6 +63,9 @@ token_t interface_member_handler(
 	void *context
 )
 {
+	(void)name;
+	(void)attributes;
+	(void)context;
 	// TODO: handle <description>, <enum>, <request>, <event>
 	if (empty)
 		return token;
@@ -82,6 +85,7 @@ token_t interface_handler(
 	void *context
 )
 {
+	(void)context;
 	token_t result = token;
 	if (empty || !streq(name, lit("interface")))
 		return result;
@@ -95,8 +99,8 @@ token_t interface_handler(
 
 		printf(
 			"#define %.*s %d\n",
-			a_value->length,
-			raw(*a_value),
+			(int)a_value->length,
+			(const char*)raw(*a_value),
 			interface_count++
 		);
 		while (result.type != element_end) {
@@ -119,9 +123,9 @@ ptr_t map_file(const char *const path)
 	if (fd < 0)
 		return (ptr_t) { 0 };
 
-	size_t file_size = lseek(fd, 0, SEEK_END);
+	ssize_t file_size = lseek(fd, 0, SEEK_END);
 	return (ptr_t) {
-		.buffer = mmap(NULL, file_size, PROT_READ, MAP_PRIVATE, fd, 0),
+		.buffer = mmap(NULL, (size_t)file_size, PROT_READ, MAP_PRIVATE, fd, 0),
 		.size = sizeof(char),
 		.length = file_size,
 	};
@@ -129,28 +133,28 @@ ptr_t map_file(const char *const path)
 
 void print_context(token_t token)
 {
-	char
+	const char
 		*before = token.value.buffer,
 		*after = token.value.buffer;
 
 	ssize_t
 		before_lines = 0,
 		after_lines = 0;
-	for (; before > token.script.buffer + 1; before--) {
+	for (; before > (char*)token.script.buffer + 1; before--) {
 		if (before_lines > 2)
 			break;
 		if (before[-1] == '\n')
 			before_lines++;
 	}
 
-	for (; after < token.script.buffer + (token.script.length - 1); after++) {
+	for (; after < (char*)token.script.buffer + (token.script.length - 1); after++) {
 		if (after_lines > 2)
 			break;
 		if (after[1] == '\n')
 			after_lines++;
 	}
 
-	fprintf(stderr, "%.*s\n", after - before, before);
+	fprintf(stderr, "%.*s\n", (int)(after - before), before);
 }
 
 int main(int argc, char **argv)
@@ -181,7 +185,7 @@ int main(int argc, char **argv)
 			}
 		}
 
-		munmap(raw(ptr), file.size);
+		munmap(file.buffer, (size_t)file.size);
 	}
 	puts(FILE_SUFFIX);
 }
