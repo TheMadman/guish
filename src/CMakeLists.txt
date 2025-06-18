@@ -10,7 +10,7 @@ target_link_libraries(guish-bin adt scallop-lang wayland-client)
 
 install(TARGETS guish
 	DESTINATION lib)
-install(TARGETS guish-bin
+install(TARGETS guish-bin guish-scanner
 	DESTINATION bin)
 install(DIRECTORY guish
 	DESTINATION include)
