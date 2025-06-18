@@ -168,7 +168,7 @@ int main(int argc, char **argv)
 		token_t token = init(ptr);
 
 		if (!valid(token)) {
-			fprintf(stderr, "script invalid\n");
+			fprintf(stderr, "script invalid: %s\n", *argv);
 			exit(EXIT_FAILURE);
 		}
 
