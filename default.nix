@@ -21,8 +21,8 @@ let
 	descent-xml = callFromGitHub {
 		owner = "TheMadman";
 		repo = "descent-xml";
-		rev = "e747b605e5c402ed7247f050e5d085e4ab2abd76";
-		hash = "sha256-IcF8d1Ey3pSwFH8voOiX1pviwvzuXrEwkPB8F59f4F8=";
+		rev = "26a37e099c9bc9a88299a841b37da14a9aae49d2";
+		hash = "sha256-yTM4g0ciDFB5SzQZqRUsUpTzgq948r4lKJuEGHkLM3Y=";
 	} { inherit libadt; };
 in
 pkgs.callPackage ./build.nix { inherit libadt scallop-lang descent-xml; }
